@@ -42,21 +42,15 @@ router.post("/newPost",async (req,res)=>{
 
 //route deletePost
 router.delete("/:postId",async (req, res)=>{
-    let postId = req.params.postId*1;
+    let postId = (req.params.postId)*1;
     console.log(postId);
     try {
-        let isExisted = await Post.findOne({postId});
-    if(isExisted){
-        isExisted=null;
-        return res.json({status:"deleted successfully"})
-    }
-    else{
+        const postDelete = await Post.findOne({postId});
+        await Post.deleteOne(postDelete);
 
-        return res.status(404).json({
-            message : "your id is not found"
-        })
+        return res.send("your post is deleted");
     }
-    } catch (error) {
+     catch (error) {
         return res.status(500).json({message : `server error : ${error.message}`});
     }
     
