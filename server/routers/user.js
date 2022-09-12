@@ -2,27 +2,11 @@ const express = require("express");
 
 const router = express.Router();
 
-//   @url   /api/user
-
-//   @type //get route
-
-// router.get("/",(req,res)=>{
-//     res.send("User router");
-// })
-
-
+const User = require("../models/Userschema");
+const RegisterComponent = require("../controllers/userRoutes");
+const loginRouter = require("../controllers/loginRoute");
 //post register route
 
-router.post("/register",(req,res)=>{
-      
-    const{username,useremail,userpassword} = req.body;
-    console.log(username,useremail,userpassword);
-
-    let userName = username;
-
-    if(userName.length<10){
-        res.send(`your name is too short : ${userName.length}`)
-    }
-})
-
+router.post("/register", RegisterComponent);
+router.post("/login",loginRouter);
 module.exports = router;

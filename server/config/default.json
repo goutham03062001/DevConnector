@@ -1,0 +1,4 @@
+{
+    "mongoDbUrl" : "mongodb+srv://Goutham:Gouthamkumar>@cluster0.vvwb08w.mongodb.net/?retryWrites=true&w=majority",
+    "jsonSecret" :"myjsonwebtoken"
+}

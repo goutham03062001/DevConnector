@@ -9,8 +9,11 @@
   "author": "Goutham",
   "license": "MIT",
   "dependencies": {
+    "bcryptjs": "^2.4.3",
     "config": "^3.3.8",
+    "dotenv": "^16.0.2",
     "express": "^4.18.1",
+    "gravatar": "^1.8.2",
     "mongoose": "^6.6.0"
   }
 }
