@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+    <form  onsubmit= this.preventDefault();>
+        <input type="number" name="quantity" id="quantity">
+        <input type="number" name="number" id="number">
+        <input type="number" name="time" id="time">
+        <button type="submit" onclick=execute();>Calculate</button>
+
+    </form>
+    <p id="res"></p>
+
+    <script>
+        function execute(e){         
+            e.preventDefault();
+            let  quantity = document.getElementById("quantity").value;
+            let  number = document.getElementById("number").value;
+            let  time = document.getElementById("time").value;
+    
+            let  res = (quantity*number*time)*1;
+    
+            console.log(res);
+            alert(res);
+            document.getElementById('res').innerHTML = res;
+        }
+    </script>
+</body>
+
+</html>

@@ -1,117 +1,215 @@
 const express = require("express");
-
 const router = express.Router();
-
 const Post = require("../models/PostSchema");
+const User = require("../models/Userschema");
 
-// router.get("/",(req,res)=>{
-//     res.send("User router");
-// })
+const auth = require("../middlewares/auth");
+const { exists } = require("../models/PostSchema");
+
+// router.get("/",auth,async(req,res)=>{
+//   res.send("your now in post schema");
+// });
+
+//@route    POST api/post/
+//@desc     create a new post
+//@access   private
+router.post("/", auth, async (req, res) => {
+  try {
+    const { name, text } = req.body;
+
+    if (!name || !text) {
+      res.status(300).json({
+        message: "Please fill all the details",
+      });
+    } else {
+      const newPost = {};
+      newPost.name = name;
+      newPost.text = text;
+      newPost.user = req.user.id;
+      const post = new Post(newPost);
+      await post.save();
+
+      //send back the post
+      res.status(200).json(newPost);
+    }
+  } catch (error) {
+    console.log("Server Error");
+    res.status(500).send(`Server Error : ${error.message}`);
+  }
+});
+
+//@route    GET api/post/:post_id
+//@desc     get a post by id
+//@access   private
+router.get("/:post_id", auth, async (req, res) => {
+  try {
+    const post = await Post.findById(req.params.post_id);
+    if (!post) {
+      res.status(404).send("Post not found");
+    } else {
+      res.status(200).json({ message: "post found", post });
+    }
+  } catch (error) {
+    console.log("Server Error");
+    res.status(500).send(`Server Error : ${error.message}`);
+  }
+});
+
+//@route    GET api/post/
+//@desc     get all posts
+//@access   private
+
+router.get("/", auth, async (req, res) => {
+  try {
+    const posts = await Post.find().sort({ date: -1 });
+    if (!posts) {
+      res.status(404).send("You don't have any posts");
+    } else {
+      res.status(200).send(posts);
+    }
+  } catch (error) {
+    console.log("Server Error");
+    res.status(500).send(`Server Error : ${error.message}`);
+  }
+});
+
+//@route    DELETE api/post/:post_id
+//@desc     Delete a post by id
+//@access   private
+router.delete("/:post_id", auth, async (req, res) => {
+  try {
+    const isExisted = await Post.findById(req.params.post_id);
+    if (!isExisted) {
+      res.status(404).send("Post Not Found");
+    } else {
+      const post = await Post.findOneAndRemove({ _id: req.params.post_id });
+      res.status(200).json({message : 'Post deleted',data : post});
+    }
+  } catch (error) {
+    console.log("Server Error");
+    res.status(500).send(`Server Error : ${error.message}`);
+  }
+});
 
 
-//post register route
+//@route    PUT api/post/:post_id
+//@desc     update the post by id
+//@access   private
 
-router.post("/newPost",async (req,res)=>{
-    const{id,name,description,author,Comments,likes,dislikes} = req.body;
-    // /const{selfComments,othersComments} = req.body.comments;
-    //insert into db
-    const{selfComments,othersComments} = req.body.Comments;
-    try {
-        
-        const newPost = new Post({id,name,description,author,Comments,likes,dislikes});
-        await newPost.save()
-        .then((success)=>{
-            return res.status(200).json({
-                message : "your post is created",
-                data:{
-                    newPost
-                }
-            })
-        })
-        .catch((err)=>{
-            return res.status(300).json({
-                message:"your post is not created",
-                error : err
-            });
-        });
-    } catch (error) {
-        console.log("error is : ",error);
+router.put("/:post_id",auth, async(req,res)=>{
+  try {
+    //check the current user and the author is same
+    const curUser = req.user.id;
+    const post = await Post.findById({_id:req.params.post_id});
+    const curAuthor = post.user;
+    if(curUser == curAuthor){
+
+      //he can able to update the post
+      const updatePost = {};
+      const{text,name} = req.body;
+      if(text){updatePost.text = text}
+      if(name){updatePost.name = name}
+
+      const newPost = await Post.findOneAndUpdate({_id : req.params.post_id},{$set:updatePost},{new :true})
+      // newPost.save();
+      res.status(200).json(newPost);
+    }
+    else{
+      res.status(400).send('You can not edit this post'); 
+    }
+  } catch (error) {
+    console.log("Server Error");
+    res.status(500).send(`Server Error : ${error.message}`);
+  }
+});
+
+
+//@route    PUT api/post/likes/:post_id
+//@desc     like or unlike
+//@access   private
+
+router.put("/likes/:post_id",auth, async(req,res)=>{
+  try {
+    const post = await Post.findById(req.params.post_id);
+    if(!post){
+      return res.status(404).send('Post Not Found');
     }
 
+    //check whether logged in user liked this post
+    if(post.likes.filter(like => like.user.toString()===req.user.id).length>0){
+      //means he has already liked 
+       res.status(400).send('This post is already liked ');
+
+      // res.status(200).json(post);
+    
+      post.save();
+    }
+    else{
+      post.likes.unshift({user:req.user.id});
+      console.log('you liked this post');
+      await post.save();
+      res.status(200).json(post);
+    }
+  } catch (error) {
+    console.log("Server Error");
+    res.status(500).send(`Server Error : ${error.message}`); 
+  }
 })
 
-//route deletePost
-router.delete("/:postId",async (req, res)=>{
-    let postId = (req.params.postId)*1;
-    console.log(postId);
-    try {
-        const postDelete = await Post.findOne({postId});
-        await Post.deleteOne(postDelete);
+//@route    PUT /comment/:post_id
+//@desc     post a comment
+//@access   private
 
-        return res.send("your post is deleted");
-    }
-     catch (error) {
-        return res.status(500).json({message : `server error : ${error.message}`});
-    }
+router.put("/comments/:post_id", auth, async(req,res)=>{
+
+  try {
+    const post = await Post.findById(req.params.post_id);
+  if(!post){return res.send('Post Not Found')}
+
+  const commentObj = {};
+  const {text} = req.body;
+  if(text){commentObj.text = text};
+  commentObj.user = req.user.id; //comment author
+
+  post.comments.unshift(commentObj);
+  await post.save();
+  res.status(200).json(post)
+  // res.status(200).send('Comment Posted Successfully');
+  } catch (error) {
+    console.log("Server Error");
+    res.status(500).send(`Server Error : ${error.message}`); 
+  }
+})
+
+
+
+//@route    DELETE /comment/:post_id
+//@desc     delete  a comment by id
+//@access   private
+router.delete("/comments/:post_id" , auth, async(req,res)=>{
+
+  try {
     
-});
+    const post = await Post.findById(req.params.post_id);
+    if(!post){return res.status(404).send('Post Not Found')}
 
-//router getAllPost
-//api    /allposts
+    //check if comment author and logged in user both are same
 
-router.get("/allposts",async (req,res)=>{
-    try {
-        
-        const allPosts = await Post.find();
+    if(post.comments.filter(comment => comment.user.toString()===req.user.id)){
 
-        if(!allPosts){
-            return res.status(404).json({
-                message : "there is no posts yet"
-            }) 
-        }
-        else{
-            return res.json({
-                length : allPosts.length,
-                data : {
-                    allPosts
-                }
-            });
-        }
+      //now he can able to delete his comment
+      post.comments.user.remove();
 
-
-    } catch (error) {
-        
-        return res.status(500).json({
-            message:`your error is : ${error.message}`
-        })
+      return  res.send('your comment is removed');
     }
-});
+    else{
 
-//route updatepost
+      return res.status(400).send('You are not authorized to remove this comment');
+    }
 
-router.patch("/:id",async (req,res)=>{
-
-    const newPostName = req.body.name;
-    let postId = (req.params.id)*1;
-
-    //find the post by id
-    const findPost = await Post.findOne({postId});
-    
-    const postName = findPost.name;
-
-    //before updating post
-
-    console.log(postName);
-    //update the post
-    const updatedPost = await Post.findOneAndUpdate({postName, newPostName});
-    //after updating
-
-    console.log(updatedPost.name);
-    return res.json({
-        message : "your post is updated ",
-        data : updatedPost
-    })
-    
-
+  } catch (error) {
+    console.log("Server Error");
+    res.status(500).send(`Server Error : ${error.message}`); 
+  }
 })
 module.exports = router;
